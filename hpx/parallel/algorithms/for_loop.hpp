@@ -185,8 +185,7 @@ namespace hpx { namespace parallel { inline namespace v2
                 return util::partitioner<ExPolicy>::call_with_index(policy,
                     first, size, stride,
                     part_iterations<F, S>{std::forward<F>(f), stride},
-                    [size](std::vector<hpx::future<void>>&&,
-                        typename hpx::util::decay<Ts>::type... ts) -> void
+                    [size](typename hpx::util::decay<Ts>::type... ts) -> void
                     {
                         // make sure live-out variables are properly set on
                         // return

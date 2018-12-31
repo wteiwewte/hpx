@@ -208,7 +208,7 @@ namespace hpx { namespace parallel { namespace util
                         parameters_type, executor_type
                     > scoped_param(policy.parameters(), policy.executor());
 
-                std::vector<hpx::future<Result> > inititems;
+                std::vector<hpx::future<Result> > inititems, workitems;
                 std::list<std::exception_ptr> errors;
 
                 try {
@@ -220,17 +220,11 @@ namespace hpx { namespace parallel { namespace util
                     auto shapes =
                         get_bulk_iteration_shape_idx(policy, inititems, f1,
                             first, count, stride, has_variable_chunk_size(),
-                            std::forward<Args>(args)...);
+                            args...);
 
-                    std::vector<hpx::future<Result> > workitems =
-                        execution::bulk_async_execute(
-                            policy.executor(),
-                            partitioner_iteration<Result, F1>{std::forward<F1>(f1)},
-                            std::move(shapes), std::forward<Args>(args)...);
-
-                    inititems.reserve(inititems.size() + workitems.size());
-                    std::move(workitems.begin(), workitems.end(),
-                        std::back_inserter(inititems));
+                    workitems = execution::bulk_async_execute(policy.executor(),
+                        partitioner_iteration<Result, F1>{std::forward<F1>(f1)},
+                        std::move(shapes), args...);
                 }
                 catch (...) {
                     handle_local_exceptions<ExPolicy>::call(
@@ -238,14 +232,15 @@ namespace hpx { namespace parallel { namespace util
                 }
 
                 // wait for all tasks to finish
-                hpx::wait_all(inititems);
+                hpx::wait_all(inititems, workitems);
 
                 // always rethrow if 'errors' is not empty or inititems has
                 // exceptional future
                 handle_local_exceptions<ExPolicy>::call(inititems, errors);
+                handle_local_exceptions<ExPolicy>::call(workitems, errors);
 
                 try {
-                    return f2(std::move(inititems), std::forward<Args>(args)...);
+                    return f2(std::forward<Args>(args)...);
                 }
                 catch (...) {
                     // rethrow either bad_alloc or exception_list
@@ -436,7 +431,7 @@ namespace hpx { namespace parallel { namespace util
                             scoped_executor_parameters
                         >(policy.parameters(), policy.executor()));
 
-                std::vector<hpx::future<Result> > inititems;
+                std::vector<hpx::future<Result> > inititems, workitems;
                 std::list<std::exception_ptr> errors;
 
                 try {
@@ -448,16 +443,11 @@ namespace hpx { namespace parallel { namespace util
                     auto shapes =
                         get_bulk_iteration_shape_idx(policy, inititems, f1,
                             first, count, stride, has_variable_chunk_size(),
-                            std::forward<Args>(args)...);
+                            args...);
 
-                    std::vector<hpx::future<Result> > workitems =
-                        execution::bulk_async_execute(
-                            policy.executor(),
-                            partitioner_iteration<Result, F1>{std::forward<F1>(f1)},
-                            std::move(shapes), std::forward<Args>(args)...);
-
-                    std::move(workitems.begin(), workitems.end(),
-                        std::back_inserter(inititems));
+                    workitems = execution::bulk_async_execute(policy.executor(),
+                        partitioner_iteration<Result, F1>{std::forward<F1>(f1)},
+                        std::move(shapes), args...);
                 }
                 catch (std::bad_alloc const&) {
                     return hpx::make_exceptional_future<R>(
@@ -472,17 +462,20 @@ namespace hpx { namespace parallel { namespace util
                     [errors,
                         HPX_CAPTURE_MOVE(scoped_param),
                         HPX_CAPTURE_FORWARD(f2)
-                    ](std::vector<hpx::future<Result> > && r,
+                    ](std::vector<hpx::future<Result> > && r1,
+                      std::vector<hpx::future<Result> > && r2,
                         typename hpx::util::decay<Args>::type&&... args
                     ) mutable -> R
                     {
                         HPX_UNUSED(scoped_param);
 
                         // inform parameter traits
-                        handle_local_exceptions<ExPolicy>::call(r, errors);
-                        return f2(std::move(r), std::move(args)...);
+                        handle_local_exceptions<ExPolicy>::call(r1, errors);
+                        handle_local_exceptions<ExPolicy>::call(r2, errors);
+                        return f2(std::move(args)...);
                     },
-                    std::move(inititems), std::forward<Args>(args)...);
+                    std::move(inititems), std::move(workitems),
+                    std::forward<Args>(args)...);
             }
         };
 
