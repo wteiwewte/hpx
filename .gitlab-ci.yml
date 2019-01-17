@@ -36,6 +36,8 @@ include:
     - .gitlab-ci/core.yml
     - .gitlab-ci/test.yml
     - .gitlab-ci/docker.yml
+    - .gitlab-ci/linux/aarch64/gcc-7.3.0/boost-1.65.1/debug.yml
+    - .gitlab-ci/linux/aarch64/gcc-7.3.0/boost-1.65.1/release.yml
     - .gitlab-ci/linux/x86/clang-7.0.1/boost-1.65.1/debug.yml
     - .gitlab-ci/linux/x86/clang-7.0.1/boost-1.65.1/release.yml
     - .gitlab-ci/docs.yml

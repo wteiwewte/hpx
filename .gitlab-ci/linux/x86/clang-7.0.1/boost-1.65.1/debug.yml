@@ -6,7 +6,13 @@
 .debug-x86: &debug-x86
     variables:
         CMAKE_BUILD_TYPE: "Debug"
-        CMAKE_EXTRA_FLAGS: "-DCMAKE_CXX_CLANG_TIDY=clang-tidy"
+        CMAKE_EXTRA_FLAGS: "
+            -DCMAKE_CXX_CLANG_TIDY=clang-tidy
+            -DCMAKE_CXX_FLAGS=-fcolor-diagnostics
+            -DHPX_WITH_MALLOC=system
+            -DHPX_WITH_TOOLS=On
+            -DHPX_WITH_DOCUMENTATION=On
+            -DHPX_WITH_THREAD_LOCAL_STORAGE=On"
         TARGET_IMAGE_NAME: stellargroup/hpx:dev
     tags:
         - linux
